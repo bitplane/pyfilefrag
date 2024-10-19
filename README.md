@@ -43,3 +43,17 @@ mapping = FileMap('/usr/bin/bash')
 print(mapping)
 print(extents)
 ```
+
+## License
+
+Licensed under the WTFPL with one additional clause:
+
+1. Don't blame me.
+
+Do whatever the fuck you want, just don't blame me.
+
+## Contributing
+
+Not that this thing will ever be big enough to need a code of conduct, but it's
+a good excuse to pimp out my
+[common fucking sense code of conduct](https://github.com/bitplane/CFS-CoC/blob/main/code_of_conduct.md).
