@@ -42,7 +42,7 @@ def main():
             filemap = FileMap(filepath)
             print(f"{filemap:{format_spec}}")
         except Exception as e:
-            print(f"Error processing {filepath}: {e}", sys.stderr)
+            print(f"Error processing {filepath}: {e}", file=sys.stderr)
             sys.exit(1)
 
 

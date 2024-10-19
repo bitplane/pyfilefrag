@@ -25,8 +25,11 @@ class FileMap:
         """
         try:
             file_stats = os.stat(self.path)
-        except FileNotFoundError:
-            raise ValueError(f"Path {self.path} does not exist.")
+        except FileNotFoundError as ex:
+            raise ValueError(f"Path {self.path} does not exist.") from ex
+
+        # update path
+        self.path = os.path.abspath(self.path)
 
         self.device = Device.from_path(self.path)
         self.inode = file_stats.st_ino
@@ -59,7 +62,10 @@ class FileMap:
         try:
             file_stats = os.stat(self.path)
         except FileNotFoundError:
-            return True  # File no longer exists
+            return True
+
+        if self.path != os.path.abspath(self.path):
+            return True
 
         if (
             self.device.id != file_stats.st_dev
@@ -68,6 +74,7 @@ class FileMap:
         ):
 
             return True
+
         return False
 
     def __eq__(self, other):
