@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import sys
 
 from .filemap import FileMap
 
@@ -39,6 +40,7 @@ def main():
             print(f"{filemap:{format_spec}}")
         except Exception as e:
             print(f"Error processing {filepath}: {e}")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
