@@ -2,6 +2,10 @@ import os
 
 
 class Device:
+    """
+    Represents a device; the backing store of a filesystem.
+    """
+
     def __init__(self):
         self.type = None
         self.id = None
@@ -9,7 +13,7 @@ class Device:
         self.source = None
 
     @classmethod
-    def from_path(cls, path):
+    def from_path(cls, path: str) -> "Device":
         instance = cls()
 
         try:
@@ -27,8 +31,8 @@ class Device:
             # Determine device type
             instance.type = "block" if instance.source else "virtual"
 
-        except FileNotFoundError:
-            raise ValueError(f"Path {path} does not exist.")
+        except FileNotFoundError as ex:
+            raise ValueError(f"Path {path} does not exist.") from ex
 
         return instance
 

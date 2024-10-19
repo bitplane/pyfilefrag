@@ -26,7 +26,7 @@ the guts of a file:
 * 📔 use them as dict keys
 * 🕳️ check files for holes, like before and after hole punching
 * ✅ verify your deduplication strategy, write your own stats tool
-* 💩 dump file layouts to json (print(f"{filemap:j}")
+* 💩 dump file layouts to json (`print(f"{filemap:j}"`)
 * ⚠️ break your disk because you believed the outputs of this alpha release!
 
 Comes with a Device class to do comparisons, so it ought to work with fragments
