@@ -3,7 +3,7 @@ import errno
 import fcntl
 
 
-# Define ioctl-related functions and structures
+# ioctl-related functions and structures
 def _IOC(dir, type, nr, size):
     IOC_NRBITS = 8
     IOC_TYPEBITS = 8
@@ -72,7 +72,9 @@ def create_fiemap_struct(extent_count):
 
 
 def get_extents(fd):
-    # This function retrieves all extents for a given file descriptor
+    """
+    This function retrieves all extents for a given file descriptor
+    """
     extents = []
     last_logical = 0
     # block_size = os.statvfs(fd).f_bsize

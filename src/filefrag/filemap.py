@@ -7,7 +7,11 @@ from .extent import Extent
 
 
 class FileMap:
-    def __init__(self, path):
+    """
+    Contains a mapping of a file to physical locations on the storage device.
+    """
+
+    def __init__(self, path: str):
         self.path = path
         self.device = None
         self.inode = None
@@ -16,7 +20,9 @@ class FileMap:
         self.update()
 
     def update(self):
-        # Get file stats
+        """
+        (re)read the data, updating the internal state.
+        """
         try:
             file_stats = os.stat(self.path)
         except FileNotFoundError:
@@ -45,8 +51,11 @@ class FileMap:
             )
             self.extents.append(extent)
 
-    def check_stale(self):
-        # Check if the file has changed since the last update
+    def check_stale(self) -> bool:
+        """
+        Returns true is the data the path points to is different to when it
+        was loaded.
+        """
         try:
             file_stats = os.stat(self.path)
         except FileNotFoundError:
@@ -71,6 +80,9 @@ class FileMap:
         )
 
     def __iter__(self):
+        """
+        Iterates over the extents in the file.
+        """
         return iter(self.extents)
 
     def __repr__(self):

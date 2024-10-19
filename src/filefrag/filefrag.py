@@ -6,6 +6,9 @@ from .filemap import FileMap
 
 
 def main():
+    """
+    Entrypoint for command line app.
+    """
     parser = argparse.ArgumentParser(description="Prints details about file fragments")
     parser.add_argument(
         "-x", "--hex", action="store_true", help="Output numbers in hexadecimal"
