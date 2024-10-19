@@ -1,0 +1,41 @@
+[project]
+name = "filefrag"
+description = "examine fragments of files in the filesystem"
+version = "0.0.1"
+authors = [
+    { name = "Gareth Davidson", email = "gaz@bitplane.net" }
+]
+
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Topic :: System :: Filesystems",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: Public Domain", # OSI: nuck my suts; WTFPL
+    "Operating System :: POSIX :: Linux",
+    "Environment :: Console",
+]
+
+
+dependencies = [
+]
+
+[project.optional-dependencies]
+dev = [
+    "flake8",
+    "pre-commit",
+    "pytest",
+    "coverage",
+    "twine",
+    "build"
+]
+
+[build-system]
+build-backend = "flit_core.buildapi"
+requires = ["flit_core >=3.2,<4"]
+
+[project.scripts]
+pyfilefrag = "filefrag.filefrag:main"
