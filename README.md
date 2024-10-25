@@ -16,7 +16,7 @@ pip install filefrag
 Run `pyfilefrag` on the command line. See `--help` for details. It has
 `--verbose`, and `--json` outputs for your parsing pleasure.
 
-To use the library, just call filefrag.FileMap('/path/whatever') to build a map
+To use the library, just call `filefrag.FileMap('/path/whatever')` to build a map
 of the extents in the file using ioctl’s interface. Then you can poke about in
 the guts of a file:
 
@@ -40,7 +40,7 @@ from filefrag import FileMap
 
 mapping = FileMap('/usr/bin/bash')
 
-print(mapping)
+print(mapping.extents)
 print(extents)
 ```
 
