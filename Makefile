@@ -15,6 +15,9 @@ test: .venv/.installed-dev  ## run the project's tests
 coverage: .venv/.installed-dev scripts/coverage.sh  ## build the html coverage report
 	scripts/coverage.sh
 
+docs: scripts/docs.sh README.md ## build and push the docs to blog site
+	scripts/docs.sh
+
 clean:  ## delete caches and the venv
 	scripts/clean.sh
 

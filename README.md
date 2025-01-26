@@ -1,8 +1,8 @@
-# filefrag
+# ⛓️‍💥 filefrag
 
 Python library to get FIE and command line tool
 
-## Install
+## 📦 Install
 
 See [the video](https://asciinema.org/a/681791) for a demo including installing
 from source, but you can install with pip:
@@ -11,7 +11,7 @@ from source, but you can install with pip:
 pip install filefrag
 ```
 
-## Usage
+## ▶️ Usage
 
 Run `pyfilefrag` on the command line. See `--help` for details. It has
 `--verbose`, and `--json` outputs for your parsing pleasure.
@@ -33,7 +33,7 @@ Comes with a Device class to do comparisons, so it ought to work with fragments
 in files on different mountpoints, bind mounts and so on (unfortunately not
 snap’s FUSE mounts; they’re far too abstract and piped in via a socket)
 
-## Example
+## 🎓 Example
 
 ```python
 from filefrag import FileMap
@@ -44,7 +44,7 @@ print(mapping.extents)
 print(extents)
 ```
 
-## License
+## ⚖️ License
 
 Licensed under the WTFPL with one additional clause:
 
@@ -52,8 +52,15 @@ Licensed under the WTFPL with one additional clause:
 
 Do whatever the fuck you want, just don't blame me.
 
-## Contributing
+## 🤝 Contributing
 
 Not that this thing will ever be big enough to need a code of conduct, but it's
 a good excuse to pimp out my
 [common fucking sense code of conduct](https://github.com/bitplane/CFS-CoC/blob/main/code_of_conduct.md).
+
+## 🔗 Links
+
+* [🐱 github](https://github.com/bitplane/filefrag)
+* [🐍 pypi](https://pypi.org/projects/filefrag)
+* [🏠 home](https://bitplane.net/dev/python/filefrag)
+* [📖 pydoc](https://bitplane.net/dev/python/filefrag/pydoc)

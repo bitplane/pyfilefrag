@@ -30,7 +30,8 @@ dev = [
     "pytest",
     "coverage",
     "twine",
-    "build"
+    "build",
+    "pydoc-markdown"
 ]
 
 [build-system]
