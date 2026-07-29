@@ -61,6 +61,6 @@ a good excuse to pimp out my
 ## 🔗 Links
 
 * [🐱 github](https://github.com/bitplane/pyfilefrag)
-* [🐍 pypi](https://pypi.org/projects/filefrag)
+* [🐍 pypi](https://pypi.org/project/filefrag)
 * [🏠 home](https://bitplane.net/dev/python/filefrag)
 * [📖 pydoc](https://bitplane.net/dev/python/filefrag/pydoc)
