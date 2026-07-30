@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 source .venv/bin/activate
 
@@ -17,4 +17,4 @@ if [ -z "$PYPI_TOKEN" ]; then
   exit 1
 fi
 
-python3 -m twine upload ./dist/* --user=__token__ --password="$PYPI_TOKEN"
+python3 -m twine upload dist/* --user=__token__ --password="$PYPI_TOKEN"
