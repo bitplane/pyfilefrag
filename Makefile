@@ -3,7 +3,7 @@
 		pre-commit update-pre-commit docs dist update-template
 
 
-PROJECT_NAME := example_package
+PROJECT_NAME := filefrag
 
 
 all: dev coverage  ## builds everything
