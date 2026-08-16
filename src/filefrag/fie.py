@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 import ctypes
 import errno
 import fcntl
+from typing import Any
 
 
 # ioctl-related functions and structures
-def _IOC(dir, type, nr, size):
+def _IOC(direction: int, type_: str, nr: int, size: int) -> int:
     IOC_NRBITS = 8
     IOC_TYPEBITS = 8
     IOC_SIZEBITS = 14
@@ -16,8 +19,8 @@ def _IOC(dir, type, nr, size):
     IOC_DIRSHIFT = IOC_SIZESHIFT + IOC_SIZEBITS
 
     return (
-        (dir << IOC_DIRSHIFT)
-        | (ord(type) << IOC_TYPESHIFT)
+        (direction << IOC_DIRSHIFT)
+        | (ord(type_) << IOC_TYPESHIFT)
         | (nr << IOC_NRSHIFT)
         | (size << IOC_SIZESHIFT)
     )
@@ -28,8 +31,8 @@ IOC_WRITE = 1
 IOC_READ = 2
 
 
-def _IOWR(type, nr, size):
-    return _IOC(IOC_READ | IOC_WRITE, type, nr, size)
+def _IOWR(type_: str, nr: int, size: int) -> int:
+    return _IOC(IOC_READ | IOC_WRITE, type_, nr, size)
 
 
 class fiemap_extent(ctypes.Structure):
@@ -56,7 +59,7 @@ class fiemap_base(ctypes.Structure):
     ]
 
 
-def create_fiemap_struct(extent_count):
+def create_fiemap_struct(extent_count: int) -> type[ctypes.Structure]:
     class fiemap(ctypes.Structure):
         _fields_ = [
             ("fm_start", ctypes.c_uint64),
@@ -71,18 +74,18 @@ def create_fiemap_struct(extent_count):
     return fiemap
 
 
-def get_extents(fd):
+def get_extents(fd: int) -> list[dict[str, int]]:
     """
     This function retrieves all extents for a given file descriptor
     """
-    extents = []
+    extents: list[dict[str, int]] = []
     last_logical = 0
     # block_size = os.statvfs(fd).f_bsize
 
     while True:
         extent_count = 32  # Number of extents to retrieve per ioctl call
         fiemap_struct = create_fiemap_struct(extent_count)
-        fm = fiemap_struct()
+        fm: Any = fiemap_struct()
         fm.fm_start = last_logical
         fm.fm_length = ctypes.c_uint64(-1).value  # Equivalent to ULLONG_MAX
         fm.fm_flags = 0

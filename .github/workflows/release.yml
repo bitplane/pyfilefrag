@@ -21,6 +21,8 @@ jobs:
         run: make dev
       - name: Unit tests
         run: make test
+      - name: Type checks
+        run: make typecheck
       - name: Build distribution
         run: make dist
       - name: Push release

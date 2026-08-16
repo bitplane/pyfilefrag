@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import json
 import os
+from collections.abc import Iterator
 
 from . import fie
 from .device import Device
@@ -11,15 +14,15 @@ class FileMap:
     Contains a mapping of a file to physical locations on the storage device.
     """
 
-    def __init__(self, path: str):
-        self.path = path
-        self.device = None
-        self.inode = None
-        self.mtime = None
-        self.extents = []
+    def __init__(self, path: str | os.PathLike[str]) -> None:
+        self.path: str = os.fspath(path)
+        self.device: Device
+        self.inode: int
+        self.mtime: float
+        self.extents: list[Extent] = []
         self.update()
 
-    def update(self):
+    def update(self) -> None:
         """
         (re)read the data, updating the internal state.
         """
@@ -77,7 +80,7 @@ class FileMap:
 
         return False
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, FileMap):
             return NotImplemented
         return (
@@ -86,16 +89,16 @@ class FileMap:
             and self.mtime == other.mtime
         )
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Extent]:
         """
         Iterates over the extents in the file.
         """
         return iter(self.extents)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<FileMap(path={self.path}, extents={len(self.extents)})>"
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec: str) -> str:
         fmt_options = set(format_spec.split(":"))
         verbose = "v" in fmt_options
         json_output = "j" in fmt_options
@@ -129,7 +132,7 @@ class FileMap:
 
         else:
             # Build text output
-            output = []
+            output: list[str] = []
             output.append(f"File: {self.path}")
             output.append(f"Device: {self.device}")
             output.append(f"Inode: {self.inode}")

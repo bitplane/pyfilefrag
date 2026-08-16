@@ -5,7 +5,7 @@ import sys
 from .filemap import FileMap
 
 
-def main():
+def main() -> None:
     """
     Entrypoint for command line app.
     """

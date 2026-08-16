@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .device import Device
 
 
@@ -25,14 +27,14 @@ class Extent:
 
     def __init__(
         self, logical: int, physical: int, length: int, flags: int, device: Device
-    ):
-        self.logical = logical
-        self.physical = physical
-        self.length = length
-        self.flags = flags
-        self.device = device  # Device object
+    ) -> None:
+        self.logical: int = logical
+        self.physical: int = physical
+        self.length: int = length
+        self.flags: int = flags
+        self.device: Device = device
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<Extent(logical={self.logical}, physical={self.physical}, "
             f"length={self.length}, flags=0x{self.flags:X})>"
@@ -125,7 +127,7 @@ class Extent:
         """
         return bool(self.flags & self.FIEMAP_EXTENT_SHARED)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Extent):
             return NotImplemented
         return (
@@ -134,16 +136,16 @@ class Extent:
             and self.length == other.length
         )
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         if not isinstance(other, Extent):
             return NotImplemented
         # Compare based on physical offset
         return self.physical < other.physical
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.device, self.physical, self.length))
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec: str) -> str:
         fmt_options = set(format_spec.split(":"))
         use_hex = "x" in fmt_options
         verbose = "v" in fmt_options
@@ -168,7 +170,7 @@ class Extent:
             flags_str = f"0x{flags:X}"
 
         # Interpret flags
-        flag_descriptions = []
+        flag_descriptions: list[str] = []
         if self.is_last:
             flag_descriptions.append("last")
         if self.is_unwritten:
@@ -188,8 +190,8 @@ class Extent:
 
         return output
 
-    def get_flag_descriptions(self):
-        flags = []
+    def get_flag_descriptions(self) -> list[str]:
+        flags: list[str] = []
         if self.is_last:
             flags.append("last")
         if self.is_unknown:

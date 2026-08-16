@@ -22,3 +22,5 @@ jobs:
         run: make dev
       - name: Unit tests
         run: make test
+      - name: Type checks
+        run: make typecheck

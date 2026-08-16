@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 
@@ -6,14 +8,14 @@ class Device:
     Represents a device; the backing store of a filesystem.
     """
 
-    def __init__(self):
-        self.type = None
-        self.id = None
-        self.block_size = None
-        self.source = None
+    def __init__(self) -> None:
+        self.type: str | None = None
+        self.id: int | None = None
+        self.block_size: int | None = None
+        self.source: str | None = None
 
     @classmethod
-    def from_path(cls, path: str) -> "Device":
+    def from_path(cls, path: str) -> Device:
         instance = cls()
 
         try:
@@ -37,9 +39,9 @@ class Device:
         return instance
 
     @staticmethod
-    def _get_device_source(path):
+    def _get_device_source(path: str) -> str | None:
         # We'll store matching mount points and their corresponding devices
-        matching_mounts = []
+        matching_mounts: list[tuple[str, str]] = []
 
         # Read /proc/mounts to get all mounted filesystems
         with open("/proc/mounts", "r") as mounts_file:
@@ -61,14 +63,14 @@ class Device:
         # Return the source device for the deepest mount point
         return matching_mounts[0][1]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<Device(type={self.type}, id={self.id}, block_size={self.block_size}, "
             f"source={self.source})>"
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, Device) and self.id == other.id
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.id)
