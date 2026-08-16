@@ -28,6 +28,7 @@ dev = [
     "flake8",
     "pre-commit",
     "pytest",
+    "pytest-cov",
     "coverage",
     "twine",
     "build",
