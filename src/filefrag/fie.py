@@ -98,7 +98,7 @@ def get_extents(fd: int) -> list[dict[str, int]]:
         try:
             fcntl.ioctl(fd, FS_IOC_FIEMAP, fm)
         except OSError as e:
-            if e.errno == errno.ENOTTY:
+            if e.errno in {errno.ENOTTY, errno.EOPNOTSUPP}:
                 raise NotImplementedError(
                     "FIEMAP ioctl is not supported on this filesystem"
                 )
