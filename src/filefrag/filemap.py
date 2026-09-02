@@ -31,31 +31,33 @@ class FileMap:
         except FileNotFoundError as ex:
             raise ValueError(f"Path {self.path} does not exist.") from ex
 
-        # update path
-        self.path = os.path.abspath(self.path)
-
-        self.device = Device.from_path(self.path)
-        self.inode = file_stats.st_ino
-        self.mtime = file_stats.st_mtime
+        path = os.path.abspath(self.path)
+        device = Device.from_path(path)
 
         # Get extents
-        fd = os.open(self.path, os.O_RDONLY)
+        fd = os.open(path, os.O_RDONLY)
         try:
             raw_extents = fie.get_extents(fd)
         finally:
             os.close(fd)
 
-        # Update extents list
-        self.extents = []
+        extents = []
         for raw_extent in raw_extents:
             extent = Extent(
                 logical=raw_extent["logical"],
                 physical=raw_extent["physical"],
                 length=raw_extent["length"],
                 flags=raw_extent["flags"],
-                device=self.device,
+                device=device,
             )
-            self.extents.append(extent)
+            extents.append(extent)
+
+        # Commit the refreshed state only after every operation succeeds.
+        self.path = path
+        self.device = device
+        self.inode = file_stats.st_ino
+        self.mtime = file_stats.st_mtime
+        self.extents = extents
 
     def check_stale(self) -> bool:
         """

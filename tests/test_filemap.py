@@ -83,6 +83,43 @@ def test_filemap_closes_file_when_extent_lookup_fails(monkeypatch, tmp_path):
     assert closed == [42]
 
 
+def test_failed_update_preserves_existing_state(monkeypatch, tmp_path):
+    path = tmp_path / "example"
+    install_filemap_mocks(monkeypatch, path)
+    filemap = FileMap(path)
+    original_state = (
+        filemap.path,
+        filemap.device,
+        filemap.inode,
+        filemap.mtime,
+        filemap.extents,
+    )
+
+    monkeypatch.setattr(
+        "filefrag.filemap.os.stat",
+        lambda target: SimpleNamespace(st_dev=999, st_ino=888, st_mtime=777),
+    )
+    replacement_device = Device()
+    replacement_device.id = 999
+    monkeypatch.setattr(Device, "from_path", lambda target: replacement_device)
+
+    def fail(fd):
+        raise RuntimeError("ioctl failed")
+
+    monkeypatch.setattr("filefrag.filemap.fie.get_extents", fail)
+
+    with pytest.raises(RuntimeError, match="ioctl failed"):
+        filemap.update()
+
+    assert (
+        filemap.path,
+        filemap.device,
+        filemap.inode,
+        filemap.mtime,
+        filemap.extents,
+    ) == original_state
+
+
 def test_filemap_staleness(monkeypatch):
     filemap = FileMap.__new__(FileMap)
     filemap.path = "/data/file"
