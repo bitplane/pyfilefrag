@@ -57,6 +57,22 @@ def test_get_device_source_uses_deepest_mount(monkeypatch):
     assert Device._get_device_source("/mnt/data/file") == "/dev/data"
 
 
+def test_get_device_source_does_not_match_partial_component(monkeypatch):
+    mounts = """/dev/root / ext4 rw 0 0
+/dev/data /mnt/data ext4 rw 0 0
+"""
+    monkeypatch.setattr("builtins.open", lambda *args, **kwargs: StringIO(mounts))
+
+    assert Device._get_device_source("/mnt/database/file") == "/dev/root"
+
+
+def test_get_device_source_decodes_mount_escapes(monkeypatch):
+    mounts = "/dev/data /mnt/my\\040data ext4 rw 0 0\n"
+    monkeypatch.setattr("builtins.open", lambda *args, **kwargs: StringIO(mounts))
+
+    assert Device._get_device_source("/mnt/my data/file") == "/dev/data"
+
+
 def test_get_device_source_returns_none_without_match(monkeypatch):
     monkeypatch.setattr(
         "builtins.open",

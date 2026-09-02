@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 
 class Device:
@@ -48,10 +49,15 @@ class Device:
             for line in mounts_file:
                 parts = line.split()
                 source_device = parts[0]  # The source device (e.g., /dev/sda1)
-                mount_point = parts[1]  # The mount point (e.g., /)
+                mount_point = re.sub(
+                    r"\\([0-7]{3})",
+                    lambda match: chr(int(match.group(1), 8)),
+                    parts[1],
+                )  # The mount point (e.g., /)
 
-                # Check if the given path starts with this mount point
-                if path.startswith(mount_point):
+                # Match complete path components, not just string prefixes.
+                mount_prefix = mount_point.rstrip("/") + "/"
+                if path == mount_point or path.startswith(mount_prefix):
                     matching_mounts.append((mount_point, source_device))
 
         if not matching_mounts:
