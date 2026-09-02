@@ -26,17 +26,16 @@ class FileMap:
         """
         (re)read the data, updating the internal state.
         """
+        path = os.path.abspath(self.path)
+
         try:
-            file_stats = os.stat(self.path)
+            fd = os.open(path, os.O_RDONLY)
         except FileNotFoundError as ex:
             raise ValueError(f"Path {self.path} does not exist.") from ex
 
-        path = os.path.abspath(self.path)
-        device = Device.from_path(path)
-
-        # Get extents
-        fd = os.open(path, os.O_RDONLY)
         try:
+            file_stats = os.fstat(fd)
+            device = Device.from_fd(fd, path)
             raw_extents = fie.get_extents(fd)
         finally:
             os.close(fd)

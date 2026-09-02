@@ -17,26 +17,23 @@ class Device:
 
     @classmethod
     def from_path(cls, path: str) -> Device:
-        instance = cls()
-
         try:
-            # Get file system stats
-            file_stats = os.stat(path)
-            fs_stats = os.statvfs(path)
-
-            # Populating fields
-            instance.id = file_stats.st_dev
-            instance.block_size = fs_stats.f_bsize
-
-            # Determine device source using /proc/mounts
-            instance.source = cls._get_device_source(path)
-
-            # Determine device type
-            instance.type = "block" if instance.source else "virtual"
-
+            fd = os.open(path, os.O_RDONLY)
         except FileNotFoundError as ex:
             raise ValueError(f"Path {path} does not exist.") from ex
 
+        try:
+            return cls.from_fd(fd, path)
+        finally:
+            os.close(fd)
+
+    @classmethod
+    def from_fd(cls, fd: int, path: str) -> Device:
+        instance = cls()
+        instance.id = os.fstat(fd).st_dev
+        instance.block_size = os.fstatvfs(fd).f_bsize
+        instance.source = cls._get_device_source(path)
+        instance.type = "block" if instance.source else "virtual"
         return instance
 
     @staticmethod

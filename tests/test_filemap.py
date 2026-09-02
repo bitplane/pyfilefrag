@@ -16,8 +16,8 @@ def install_filemap_mocks(monkeypatch, path):
     device.source = "/dev/example"
     closed = []
 
-    monkeypatch.setattr("filefrag.filemap.os.stat", lambda target: stats)
-    monkeypatch.setattr(Device, "from_path", lambda target: device)
+    monkeypatch.setattr("filefrag.filemap.os.fstat", lambda fd: stats)
+    monkeypatch.setattr(Device, "from_fd", lambda fd, target: device)
     monkeypatch.setattr("filefrag.filemap.os.open", lambda target, flags: 42)
     monkeypatch.setattr("filefrag.filemap.os.close", closed.append)
     monkeypatch.setattr(
@@ -60,10 +60,10 @@ def test_filemap_loads_and_formats_extents(monkeypatch, tmp_path):
 
 
 def test_filemap_rejects_missing_path(monkeypatch):
-    def missing(path):
+    def missing(path, flags):
         raise FileNotFoundError(path)
 
-    monkeypatch.setattr("filefrag.filemap.os.stat", missing)
+    monkeypatch.setattr("filefrag.filemap.os.open", missing)
 
     with pytest.raises(ValueError, match="Path /missing does not exist"):
         FileMap("/missing")
@@ -96,12 +96,12 @@ def test_failed_update_preserves_existing_state(monkeypatch, tmp_path):
     )
 
     monkeypatch.setattr(
-        "filefrag.filemap.os.stat",
-        lambda target: SimpleNamespace(st_dev=999, st_ino=888, st_mtime=777),
+        "filefrag.filemap.os.fstat",
+        lambda fd: SimpleNamespace(st_dev=999, st_ino=888, st_mtime=777),
     )
     replacement_device = Device()
     replacement_device.id = 999
-    monkeypatch.setattr(Device, "from_path", lambda target: replacement_device)
+    monkeypatch.setattr(Device, "from_fd", lambda fd, target: replacement_device)
 
     def fail(fd):
         raise RuntimeError("ioctl failed")

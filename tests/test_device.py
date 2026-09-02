@@ -7,12 +7,15 @@ from filefrag.device import Device
 
 
 def test_from_path_populates_device(monkeypatch):
+    monkeypatch.setattr("filefrag.device.os.open", lambda path, flags: 42)
     monkeypatch.setattr(
-        "filefrag.device.os.stat", lambda path: SimpleNamespace(st_dev=123)
+        "filefrag.device.os.fstat", lambda fd: SimpleNamespace(st_dev=123)
     )
     monkeypatch.setattr(
-        "filefrag.device.os.statvfs", lambda path: SimpleNamespace(f_bsize=4096)
+        "filefrag.device.os.fstatvfs", lambda fd: SimpleNamespace(f_bsize=4096)
     )
+    closed = []
+    monkeypatch.setattr("filefrag.device.os.close", closed.append)
     monkeypatch.setattr(Device, "_get_device_source", lambda path: "/dev/example")
 
     device = Device.from_path("/data/file")
@@ -24,25 +27,28 @@ def test_from_path_populates_device(monkeypatch):
     assert repr(device) == (
         "<Device(type=block, id=123, block_size=4096, source=/dev/example)>"
     )
+    assert closed == [42]
 
 
 def test_from_path_marks_filesystem_without_source_as_virtual(monkeypatch):
+    monkeypatch.setattr("filefrag.device.os.open", lambda path, flags: 42)
     monkeypatch.setattr(
-        "filefrag.device.os.stat", lambda path: SimpleNamespace(st_dev=123)
+        "filefrag.device.os.fstat", lambda fd: SimpleNamespace(st_dev=123)
     )
     monkeypatch.setattr(
-        "filefrag.device.os.statvfs", lambda path: SimpleNamespace(f_bsize=4096)
+        "filefrag.device.os.fstatvfs", lambda fd: SimpleNamespace(f_bsize=4096)
     )
+    monkeypatch.setattr("filefrag.device.os.close", lambda fd: None)
     monkeypatch.setattr(Device, "_get_device_source", lambda path: None)
 
     assert Device.from_path("/data/file").type == "virtual"
 
 
 def test_from_path_rejects_missing_path(monkeypatch):
-    def missing(path):
+    def missing(path, flags):
         raise FileNotFoundError(path)
 
-    monkeypatch.setattr("filefrag.device.os.stat", missing)
+    monkeypatch.setattr("filefrag.device.os.open", missing)
 
     with pytest.raises(ValueError, match="Path /missing does not exist"):
         Device.from_path("/missing")
