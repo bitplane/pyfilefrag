@@ -9,6 +9,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.mark.parametrize("status", [0, 1, 5])
 def test_coverage_script_propagates_test_status(tmp_path, status):
+    summary = tmp_path / "htmlcov" / "missing_coverage.txt"
+    summary.parent.mkdir()
+    summary.write_text("obsolete summary")
     activate = tmp_path / ".venv" / "bin" / "activate"
     activate.parent.mkdir(parents=True)
     activate.write_text("")
@@ -29,6 +32,7 @@ def test_coverage_script_propagates_test_status(tmp_path, status):
     )
 
     assert result.returncode == status
+    assert summary.read_text() == "Missing coverage summary\n"
     assert "Missing coverage summary" in result.stdout
     assert (
         "Missing coverage summary"
