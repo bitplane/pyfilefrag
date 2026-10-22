@@ -38,22 +38,27 @@ class FileMap:
             path = os.path.join(os.getcwd(), path)
 
         try:
-            fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+            path_fd = os.open(path, os.O_PATH)
         except FileNotFoundError as ex:
             raise ValueError(f"Path {self.path} does not exist.") from ex
 
         try:
-            file_stats = os.fstat(fd)
-            if not (
-                stat.S_ISREG(file_stats.st_mode) or stat.S_ISDIR(file_stats.st_mode)
-            ):
+            mode = os.fstat(path_fd).st_mode
+            if not (stat.S_ISREG(mode) or stat.S_ISDIR(mode)):
                 raise _UnsupportedFileTypeError(
                     f"Path {self.path} is not a regular file or directory."
                 )
-            device = Device.from_fd(fd, path)
-            raw_extents = fie.get_extents(fd)
+            # Reopen the same inode only after ruling out special files. Plain
+            # O_RDONLY preserves normal lease handling for regular files.
+            fd = os.open(f"/proc/self/fd/{path_fd}", os.O_RDONLY)
+            try:
+                file_stats = os.fstat(fd)
+                device = Device.from_fd(fd, path)
+                raw_extents = fie.get_extents(fd)
+            finally:
+                os.close(fd)
         finally:
-            os.close(fd)
+            os.close(path_fd)
 
         extents = []
         for raw_extent in raw_extents:

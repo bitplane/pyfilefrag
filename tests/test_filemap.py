@@ -33,7 +33,10 @@ def install_filemap_mocks(monkeypatch, path):
     monkeypatch.setattr("filefrag.filemap.os.stat", stat_path)
     monkeypatch.setattr("filefrag.filemap.os.fstat", lambda fd: stats)
     monkeypatch.setattr(Device, "from_fd", lambda fd, target: device)
-    monkeypatch.setattr("filefrag.filemap.os.open", lambda target, flags: 42)
+    monkeypatch.setattr(
+        "filefrag.filemap.os.open",
+        lambda target, flags: 42 if flags == os.O_PATH else 43,
+    )
     monkeypatch.setattr("filefrag.filemap.os.close", closed.append)
     monkeypatch.setattr(
         "filefrag.filemap.fie.get_extents",
@@ -56,7 +59,7 @@ def test_filemap_loads_and_formats_extents(monkeypatch, tmp_path):
     assert filemap.inode == stats.st_ino
     assert filemap.mtime == stats.st_mtime
     assert [extent.physical for extent in filemap] == [4096, 8192]
-    assert closed == [42]
+    assert closed == [43, 42]
     assert repr(filemap) == f"<FileMap(path={path}, extents=2)>"
 
     text = format(filemap, "v")
@@ -95,7 +98,7 @@ def test_filemap_closes_file_when_extent_lookup_fails(monkeypatch, tmp_path):
 
     with pytest.raises(RuntimeError, match="ioctl failed"):
         FileMap(path)
-    assert closed == [42]
+    assert closed == [43, 42]
 
 
 def test_failed_update_preserves_existing_state(monkeypatch, tmp_path):
@@ -270,3 +273,61 @@ def test_staleness_preserves_io_errors(monkeypatch, tmp_path):
     monkeypatch.setattr("filefrag.filemap.fie.get_extents", failed)
     with pytest.raises(PermissionError):
         mapping.check_stale()
+
+
+@pytest.mark.parametrize(
+    "mode", [stat.S_IFIFO, stat.S_IFCHR, stat.S_IFBLK, stat.S_IFSOCK]
+)
+def test_special_files_are_never_opened_for_io(monkeypatch, tmp_path, mode):
+    path = tmp_path / "special"
+    stats, _, closed = install_filemap_mocks(monkeypatch, path)
+    stats.st_mode = mode
+    opened = []
+
+    def open_path(target, flags):
+        opened.append((target, flags))
+        return 42
+
+    monkeypatch.setattr("filefrag.filemap.os.open", open_path)
+    with pytest.raises(ValueError, match="not a regular file or directory"):
+        FileMap(path)
+    assert opened == [(str(path), os.O_PATH)]
+    assert closed == [42]
+
+
+def test_path_descriptor_is_closed_when_read_open_fails(monkeypatch, tmp_path):
+    path = tmp_path / "file"
+    _, _, closed = install_filemap_mocks(monkeypatch, path)
+
+    def open_path(target, flags):
+        if flags == os.O_PATH:
+            return 42
+        assert target == "/proc/self/fd/42"
+        assert flags == os.O_RDONLY
+        raise PermissionError("denied")
+
+    monkeypatch.setattr("filefrag.filemap.os.open", open_path)
+    with pytest.raises(PermissionError):
+        FileMap(path)
+    assert closed == [42]
+
+
+def test_reopen_keeps_original_inode_if_path_is_replaced(monkeypatch, tmp_path):
+    path = tmp_path / "file"
+    path.write_text("original")
+    original_inode = path.stat().st_ino
+    real_open = os.open
+
+    def open_path(target, flags):
+        fd = real_open(target, flags)
+        if flags == os.O_PATH:
+            path.rename(tmp_path / "old")
+            path.write_text("replacement")
+        return fd
+
+    monkeypatch.setattr("filefrag.filemap.os.open", open_path)
+    monkeypatch.setattr("filefrag.filemap.fie.get_extents", lambda fd: [])
+    mapping = FileMap(path)
+    assert mapping.inode == original_inode
+    assert mapping.inode != path.stat().st_ino
+    assert mapping.check_stale() is True
