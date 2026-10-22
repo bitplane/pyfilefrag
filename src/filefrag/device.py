@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import stat
 
 
 class Device:
@@ -33,8 +34,26 @@ class Device:
         instance.id = os.fstat(fd).st_dev
         instance.block_size = os.fstatvfs(fd).f_bsize
         instance.source = cls._get_device_source(fd)
-        instance.type = "block" if instance.source else "virtual"
+        instance.type = cls._get_device_type(instance.id, instance.source)
         return instance
+
+    @staticmethod
+    def _get_device_type(device_id: int, source: str | None) -> str | None:
+        # sysfs also works when a container cannot see the source device node.
+        if os.path.exists(
+            f"/sys/dev/block/{os.major(device_id)}:{os.minor(device_id)}"
+        ):
+            return "block"
+        if source is None:
+            return None
+        if os.path.isabs(source):
+            try:
+                mode = os.stat(source).st_mode
+            except OSError:
+                # An inaccessible source is not evidence of a virtual device.
+                return None
+            return "block" if stat.S_ISBLK(mode) else "virtual"
+        return "virtual"
 
     @staticmethod
     def _get_device_source(fd: int) -> str | None:

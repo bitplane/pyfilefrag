@@ -1,4 +1,5 @@
 import os
+import stat
 from io import StringIO
 from types import SimpleNamespace
 
@@ -18,6 +19,7 @@ def test_from_path_populates_device(monkeypatch):
     closed = []
     monkeypatch.setattr("filefrag.device.os.close", closed.append)
     monkeypatch.setattr(Device, "_get_device_source", lambda path: "/dev/example")
+    monkeypatch.setattr(Device, "_get_device_type", lambda device_id, source: "block")
 
     device = Device.from_path("/data/file")
 
@@ -31,7 +33,7 @@ def test_from_path_populates_device(monkeypatch):
     assert closed == [42]
 
 
-def test_from_path_marks_filesystem_without_source_as_virtual(monkeypatch):
+def test_from_path_leaves_unavailable_device_type_unknown(monkeypatch):
     monkeypatch.setattr("filefrag.device.os.open", lambda path, flags: 42)
     monkeypatch.setattr(
         "filefrag.device.os.fstat", lambda fd: SimpleNamespace(st_dev=123)
@@ -41,8 +43,9 @@ def test_from_path_marks_filesystem_without_source_as_virtual(monkeypatch):
     )
     monkeypatch.setattr("filefrag.device.os.close", lambda fd: None)
     monkeypatch.setattr(Device, "_get_device_source", lambda path: None)
+    monkeypatch.setattr("filefrag.device.os.path.exists", lambda path: False)
 
-    assert Device.from_path("/data/file").type == "virtual"
+    assert Device.from_path("/data/file").type is None
 
 
 def test_from_path_rejects_missing_path(monkeypatch):
@@ -117,3 +120,41 @@ def test_source_lookup_survives_unlink(tmp_path):
         assert actual.id == expected.id
     finally:
         os.close(fd)
+
+
+@pytest.mark.parametrize("source", ["proc", "tmpfs", "overlay", "server:/export"])
+def test_virtual_mount_sources_are_not_block_devices(monkeypatch, source):
+    monkeypatch.setattr("filefrag.device.os.path.exists", lambda path: False)
+    assert Device._get_device_type(123, source) == "virtual"
+
+
+def test_block_device_is_detected_without_source_node(monkeypatch):
+    monkeypatch.setattr(
+        "filefrag.device.os.path.exists", lambda path: path == "/sys/dev/block/8:1"
+    )
+    assert Device._get_device_type(os.makedev(8, 1), "/dev/missing") == "block"
+
+
+@pytest.mark.parametrize(
+    "mode,expected", [(stat.S_IFBLK, "block"), (stat.S_IFREG, "virtual")]
+)
+def test_source_node_type_is_checked(monkeypatch, mode, expected):
+    monkeypatch.setattr("filefrag.device.os.path.exists", lambda path: False)
+    monkeypatch.setattr(
+        "filefrag.device.os.stat", lambda path: SimpleNamespace(st_mode=mode)
+    )
+    assert Device._get_device_type(123, "/dev/source") == expected
+
+
+def test_inaccessible_source_type_is_unknown(monkeypatch):
+    monkeypatch.setattr("filefrag.device.os.path.exists", lambda path: False)
+
+    def inaccessible(path):
+        raise PermissionError(path)
+
+    monkeypatch.setattr("filefrag.device.os.stat", inaccessible)
+    assert Device._get_device_type(123, "/dev/source") is None
+
+
+def test_proc_is_virtual():
+    assert Device.from_path("/proc/version").type == "virtual"
