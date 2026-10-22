@@ -61,29 +61,33 @@ class Device:
 
     @staticmethod
     def _get_device_source(fd: int) -> str | None:
-        # Match the descriptor's mount, even after a rename or through a symlink.
-        mount_id = None
-        with open(f"/proc/self/fdinfo/{fd}", "r") as fdinfo:
-            for line in fdinfo:
-                if line.startswith("mnt_id:"):
-                    mount_id = line.split()[1]
-                    break
-        if mount_id is None:
-            return None
+        try:
+            # Match the descriptor's mount, even after a rename or through a symlink.
+            mount_id = None
+            with open(f"/proc/self/fdinfo/{fd}", "r") as fdinfo:
+                for line in fdinfo:
+                    if line.startswith("mnt_id:"):
+                        mount_id = line.split()[1]
+                        break
+            if mount_id is None:
+                return None
 
-        with open("/proc/self/mountinfo", "r") as mounts:
-            for line in mounts:
-                parts = line.split()
-                if parts[0] != mount_id:
-                    continue
-                separator = parts.index("-")
-                source = parts[separator + 2]
-                return re.sub(
-                    r"\\([0-7]{3})",
-                    lambda match: chr(int(match.group(1), 8)),
-                    source,
-                )
-        return None
+            with open("/proc/self/mountinfo", "r") as mounts:
+                for line in mounts:
+                    parts = line.split()
+                    if parts[0] != mount_id:
+                        continue
+                    separator = parts.index("-")
+                    source = parts[separator + 2]
+                    return re.sub(
+                        r"\\([0-7]{3})",
+                        lambda match: chr(int(match.group(1), 8)),
+                        source,
+                    )
+            return None
+        except OSError:
+            # Mount metadata can be restricted even when FIEMAP is available.
+            return None
 
     def __repr__(self) -> str:
         return (

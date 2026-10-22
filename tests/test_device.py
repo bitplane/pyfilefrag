@@ -158,3 +158,22 @@ def test_inaccessible_source_type_is_unknown(monkeypatch):
 
 def test_proc_is_virtual():
     assert Device.from_path("/proc/version").type == "virtual"
+
+
+@pytest.mark.parametrize("restricted", ["/proc/self/fdinfo/", "/proc/self/mountinfo"])
+def test_restricted_mount_metadata_does_not_prevent_device_lookup(
+    monkeypatch, tmp_path, restricted
+):
+    path = tmp_path / "file"
+    path.touch()
+    real_open = open
+
+    def restricted_open(target, *args, **kwargs):
+        if str(target).startswith(restricted):
+            raise PermissionError("mount metadata restricted")
+        return real_open(target, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.open", restricted_open)
+    device = Device.from_path(str(path))
+    assert device.id == path.stat().st_dev
+    assert device.source is None
