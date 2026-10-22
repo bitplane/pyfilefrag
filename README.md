@@ -15,6 +15,8 @@ pip install filefrag
 
 Run `pyfilefrag` on the command line. See `--help` for details. It has
 `--verbose`, and `--json` outputs for your parsing pleasure.
+JSON output is an object for one file and an array for multiple files. If any
+input fails, JSON mode exits unsuccessfully without writing a partial document.
 
 To use the library, just call `filefrag.FileMap('/path/whatever')` to build a map
 of the extents in the file using ioctl’s interface. Then you can poke about in

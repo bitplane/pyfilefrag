@@ -36,14 +36,27 @@ def main() -> None:
 
     format_spec = ":".join(fmt_options)
 
-    # Process each file
+    # Buffer JSON so a later failure cannot leave a partial document on stdout.
+    json_results = []
     for filepath in args.files:
         try:
             filemap = FileMap(filepath)
-            print(f"{filemap:{format_spec}}")
+            output = format(filemap, format_spec)
+            if args.json:
+                json_results.append(output)
+            else:
+                print(output)
         except Exception as e:
             print(f"Error processing {filepath}: {e}", file=sys.stderr)
             sys.exit(1)
+
+    if args.json:
+        # Preserve the existing single-file object format.
+        print(
+            json_results[0]
+            if len(json_results) == 1
+            else "[\n" + ",\n".join(json_results) + "\n]"
+        )
 
 
 if __name__ == "__main__":
