@@ -23,7 +23,14 @@ def install_filemap_mocks(monkeypatch, path):
         id=stats.st_dev, type="block", block_size=4096, source="/dev/example"
     )
     closed = []
+    real_stat = os.stat
 
+    def stat_path(target, *args, **kwargs):
+        if os.fspath(target) == str(path):
+            return stats
+        return real_stat(target, *args, **kwargs)
+
+    monkeypatch.setattr("filefrag.filemap.os.stat", stat_path)
     monkeypatch.setattr("filefrag.filemap.os.fstat", lambda fd: stats)
     monkeypatch.setattr(Device, "from_fd", lambda fd, target: device)
     monkeypatch.setattr("filefrag.filemap.os.open", lambda target, flags: 42)
@@ -230,3 +237,36 @@ def test_directory_mapping_is_supported(monkeypatch, tmp_path):
     mapping = FileMap(tmp_path)
     assert mapping.inode == tmp_path.stat().st_ino
     assert mapping.check_stale() is False
+
+
+@pytest.mark.parametrize("changed_device", [False, True])
+def test_stale_when_path_no_longer_supports_fiemap(
+    monkeypatch, tmp_path, changed_device
+):
+    path = tmp_path / "file"
+    stats, _, _ = install_filemap_mocks(monkeypatch, path)
+    mapping = FileMap(path)
+    calls = []
+
+    def unsupported(fd):
+        calls.append(fd)
+        raise NotImplementedError("FIEMAP unavailable")
+
+    monkeypatch.setattr("filefrag.filemap.fie.get_extents", unsupported)
+    if changed_device:
+        stats.st_dev += 1
+    assert mapping.check_stale() is True
+    assert bool(calls) is not changed_device
+
+
+def test_staleness_preserves_io_errors(monkeypatch, tmp_path):
+    path = tmp_path / "file"
+    install_filemap_mocks(monkeypatch, path)
+    mapping = FileMap(path)
+
+    def failed(fd):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr("filefrag.filemap.fie.get_extents", failed)
+    with pytest.raises(PermissionError):
+        mapping.check_stale()

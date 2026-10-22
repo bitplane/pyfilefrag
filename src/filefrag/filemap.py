@@ -82,15 +82,30 @@ class FileMap:
         """
         Re-read the path and compare metadata and extent records.
 
-        Missing paths and unresolved physical locations are stale. This performs
-        I/O and may raise filesystem errors. A false result is only a snapshot:
+        Missing paths, unsupported mappings and unresolved locations are stale.
+        This performs I/O and may raise other filesystem errors. A false result is a snapshot:
         concurrent writes or filesystem maintenance can invalidate it later.
         """
         if any(not e.has_physical_location for e in self.extents):
             return True
         try:
+            current_stats = os.stat(self.path)
+        except (FileNotFoundError, NotADirectoryError):
+            return True
+        if (
+            current_stats.st_dev != self.device.id
+            or current_stats.st_ino != self.inode
+            or (
+                current_stats.st_mtime_ns,
+                current_stats.st_ctime_ns,
+                current_stats.st_size,
+            )
+            != self._stat_signature
+        ):
+            return True
+        try:
             current = FileMap(self.path)
-        except (_UnsupportedFileTypeError, NotADirectoryError):
+        except (_UnsupportedFileTypeError, NotADirectoryError, NotImplementedError):
             return True
         except ValueError as ex:
             if isinstance(ex.__cause__, FileNotFoundError):
