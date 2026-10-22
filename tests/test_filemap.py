@@ -1,5 +1,6 @@
 import json
 import os
+import stat
 from types import SimpleNamespace
 
 import pytest
@@ -10,6 +11,7 @@ from filefrag.filemap import FileMap
 
 def install_filemap_mocks(monkeypatch, path):
     stats = SimpleNamespace(
+        st_mode=stat.S_IFREG,
         st_dev=123,
         st_ino=456,
         st_mtime=789.5,
@@ -103,7 +105,9 @@ def test_failed_update_preserves_existing_state(monkeypatch, tmp_path):
 
     monkeypatch.setattr(
         "filefrag.filemap.os.fstat",
-        lambda fd: SimpleNamespace(st_dev=999, st_ino=888, st_mtime=777),
+        lambda fd: SimpleNamespace(
+            st_mode=stat.S_IFREG, st_dev=999, st_ino=888, st_mtime=777
+        ),
     )
     replacement_device = Device(id=999)
     monkeypatch.setattr(Device, "from_fd", lambda fd, target: replacement_device)
@@ -209,3 +213,13 @@ def test_symlink_parent_path_opens_requested_inode(monkeypatch, tmp_path, relati
     assert mapping.check_stale() is False
     mapping.update()
     assert mapping.inode == intended.stat().st_ino
+
+
+def test_replacing_file_with_directory_makes_map_stale(monkeypatch, tmp_path):
+    path = tmp_path / "file"
+    path.touch()
+    monkeypatch.setattr("filefrag.filemap.fie.get_extents", lambda fd: [])
+    mapping = FileMap(path)
+    path.unlink()
+    path.mkdir()
+    assert mapping.check_stale() is True

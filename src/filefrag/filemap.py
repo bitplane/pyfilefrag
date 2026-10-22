@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 from collections.abc import Iterator
 
 from . import fie
 from .device import Device
 from .extent import Extent
+
+
+class _NotRegularFileError(ValueError):
+    pass
 
 
 class FileMap:
@@ -33,12 +38,14 @@ class FileMap:
             path = os.path.join(os.getcwd(), path)
 
         try:
-            fd = os.open(path, os.O_RDONLY)
+            fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
         except FileNotFoundError as ex:
             raise ValueError(f"Path {self.path} does not exist.") from ex
 
         try:
             file_stats = os.fstat(fd)
+            if not stat.S_ISREG(file_stats.st_mode):
+                raise _NotRegularFileError(f"Path {self.path} is not a regular file.")
             device = Device.from_fd(fd, path)
             raw_extents = fie.get_extents(fd)
         finally:
@@ -79,6 +86,8 @@ class FileMap:
             return True
         try:
             current = FileMap(self.path)
+        except (_NotRegularFileError, NotADirectoryError):
+            return True
         except ValueError as ex:
             if isinstance(ex.__cause__, FileNotFoundError):
                 return True

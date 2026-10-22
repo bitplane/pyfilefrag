@@ -20,7 +20,7 @@ class Device:
     @classmethod
     def from_path(cls, path: str) -> Device:
         try:
-            fd = os.open(path, os.O_RDONLY)
+            fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
         except FileNotFoundError as ex:
             raise ValueError(f"Path {path} does not exist.") from ex
 

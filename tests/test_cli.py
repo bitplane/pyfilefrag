@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import sys
 
 import pytest
 
@@ -45,3 +48,31 @@ def test_text_output_keeps_multiple_files_and_format_options(monkeypatch, capsys
     monkeypatch.setattr("sys.argv", ["pyfilefrag", "-x", "-v", "first", "second"])
     main()
     assert capsys.readouterr().out == "first (x:v)\nsecond (x:v)\n"
+
+
+def test_fifo_does_not_block_cli_or_device_lookup(tmp_path):
+    fifo = tmp_path / "fifo"
+    os.mkfifo(fifo)
+    result = subprocess.run(
+        [sys.executable, "-m", "filefrag", str(fifo)],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert result.returncode == 1
+    assert "not a regular file" in result.stderr
+    assert not result.stdout
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from filefrag import Device; import sys; "
+            "print(Device.from_path(sys.argv[1]))",
+            str(fifo),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert result.returncode == 0, result.stderr
