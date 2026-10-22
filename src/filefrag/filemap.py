@@ -19,6 +19,7 @@ class FileMap:
         self.device: Device
         self.inode: int
         self.mtime: float
+        self._stat_signature: tuple[int, int, int]
         self.extents: list[Extent] = []
         self.update()
 
@@ -59,30 +60,34 @@ class FileMap:
         self.device = device
         self.inode = file_stats.st_ino
         self.mtime = file_stats.st_mtime
+        self._stat_signature = (
+            file_stats.st_mtime_ns,
+            file_stats.st_ctime_ns,
+            file_stats.st_size,
+        )
         self.extents = extents
 
     def check_stale(self) -> bool:
         """
-        Returns true is the data the path points to is different to when it
-        was loaded.
+        Re-read the path and compare metadata and extent records.
+
+        Missing paths and unresolved physical locations are stale. This performs
+        I/O and may raise filesystem errors. A false result is only a snapshot:
+        concurrent writes or filesystem maintenance can invalidate it later.
         """
+        if any(e.is_unknown or e.is_delayed_allocation for e in self.extents):
+            return True
         try:
-            file_stats = os.stat(self.path)
-        except FileNotFoundError:
-            return True
+            current = FileMap(self.path)
+        except ValueError as ex:
+            if isinstance(ex.__cause__, FileNotFoundError):
+                return True
+            raise
+        return self != current
 
-        if not os.path.isabs(self.path):
-            return True
-
-        if (
-            self.device.id != file_stats.st_dev
-            or self.inode != file_stats.st_ino
-            or self.mtime != file_stats.st_mtime
-        ):
-
-            return True
-
-        return False
+    def _extent_state(self) -> list[tuple[int, int, int, int]]:
+        # Extent equality deliberately ignores logical offsets and most flags.
+        return [(e.logical, e.physical, e.length, e.flags) for e in self.extents]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, FileMap):
@@ -91,6 +96,8 @@ class FileMap:
             self.device == other.device
             and self.inode == other.inode
             and self.mtime == other.mtime
+            and self._stat_signature == other._stat_signature
+            and self._extent_state() == other._extent_state()
         )
 
     def __iter__(self) -> Iterator[Extent]:

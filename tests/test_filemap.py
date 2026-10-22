@@ -9,7 +9,14 @@ from filefrag.filemap import FileMap
 
 
 def install_filemap_mocks(monkeypatch, path):
-    stats = SimpleNamespace(st_dev=123, st_ino=456, st_mtime=789.5)
+    stats = SimpleNamespace(
+        st_dev=123,
+        st_ino=456,
+        st_mtime=789.5,
+        st_mtime_ns=789500000000,
+        st_ctime_ns=789500000000,
+        st_size=8192,
+    )
     device = Device()
     device.id = stats.st_dev
     device.type = "block"
@@ -121,47 +128,69 @@ def test_failed_update_preserves_existing_state(monkeypatch, tmp_path):
     ) == original_state
 
 
-def test_filemap_staleness(monkeypatch):
-    filemap = FileMap.__new__(FileMap)
-    filemap.path = "/data/file"
-    filemap.device = Device()
-    filemap.device.id = 123
-    filemap.inode = 456
-    filemap.mtime = 789.5
+def test_filemap_staleness(monkeypatch, tmp_path):
+    path = tmp_path / "example"
+    stats, _, _ = install_filemap_mocks(monkeypatch, path)
+    mapping = FileMap(path)
+    assert mapping.check_stale() is False
+    stats.st_ctime_ns += 1
+    assert mapping.check_stale() is True
 
-    monkeypatch.setattr(
-        "filefrag.filemap.os.stat",
-        lambda path: SimpleNamespace(st_dev=123, st_ino=456, st_mtime=789.5),
-    )
-    assert filemap.check_stale() is False
-
-    monkeypatch.setattr(
-        "filefrag.filemap.os.stat",
-        lambda path: SimpleNamespace(st_dev=999, st_ino=456, st_mtime=789.5),
-    )
-    assert filemap.check_stale() is True
-
-    def missing(path):
+    def missing(path, flags):
         raise FileNotFoundError(path)
 
-    monkeypatch.setattr("filefrag.filemap.os.stat", missing)
-    assert filemap.check_stale() is True
+    monkeypatch.setattr("filefrag.filemap.os.open", missing)
+    assert mapping.check_stale() is True
 
 
-def test_filemap_equality():
-    first = FileMap.__new__(FileMap)
-    second = FileMap.__new__(FileMap)
-    first.device = Device()
-    second.device = Device()
-    first.device.id = second.device.id = 123
-    first.inode = second.inode = 456
-    first.mtime = second.mtime = 789.5
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("logical", 512),
+        ("physical", 12288),
+        ("length", 2048),
+        ("flags", 2048),
+    ],
+)
+def test_staleness_detects_layout_changes_without_timestamp_changes(
+    monkeypatch, tmp_path, field, value
+):
+    path = tmp_path / "example"
+    install_filemap_mocks(monkeypatch, path)
+    mapping = FileMap(path)
+    changed = [
+        {"logical": 0, "physical": 4096, "length": 4096, "flags": 0},
+        {"logical": 4096, "physical": 8192, "length": 4096, "flags": 1},
+    ]
+    changed[0][field] = value
+    monkeypatch.setattr("filefrag.filemap.fie.get_extents", lambda fd: changed)
 
+    assert mapping.check_stale() is True
+    assert mapping != FileMap(path)
+    assert mapping.extents[0].physical == 4096
+
+
+@pytest.mark.parametrize("flags", [2, 4, 7])
+def test_unresolved_mapping_is_stale(monkeypatch, tmp_path, flags):
+    path = tmp_path / "example"
+    install_filemap_mocks(monkeypatch, path)
+    monkeypatch.setattr(
+        "filefrag.filemap.fie.get_extents",
+        lambda fd: [
+            {"logical": 0, "physical": 0, "length": 4096, "flags": flags},
+        ],
+    )
+    assert FileMap(path).check_stale() is True
+
+
+def test_filemap_equality(monkeypatch, tmp_path):
+    path = tmp_path / "example"
+    stats, _, _ = install_filemap_mocks(monkeypatch, path)
+    first, second = FileMap(path), FileMap(path)
     assert first == second
     assert first.__eq__(object()) is NotImplemented
-
-    second.mtime = 0
-    assert first != second
+    stats.st_mtime_ns += 1
+    assert first != FileMap(path)
 
 
 @pytest.mark.parametrize("relative", [False, True])
