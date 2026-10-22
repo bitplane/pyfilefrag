@@ -5,8 +5,7 @@ from filefrag.extent import Extent
 
 
 def make_extent(*, logical=16, physical=32, length=48, flags=0, device_id=123):
-    device = Device()
-    device.id = device_id
+    device = Device(id=device_id)
     return Extent(logical, physical, length, flags, device)
 
 

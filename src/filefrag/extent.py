@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from .device import Device
 
 
+@dataclass(frozen=True, eq=False)
 class Extent:
     """
     Represents a range of data inside a file.
@@ -25,14 +28,11 @@ class Extent:
     FIEMAP_EXTENT_MERGED = 0x00001000
     FIEMAP_EXTENT_SHARED = 0x00002000
 
-    def __init__(
-        self, logical: int, physical: int, length: int, flags: int, device: Device
-    ) -> None:
-        self.logical: int = logical
-        self.physical: int = physical
-        self.length: int = length
-        self.flags: int = flags
-        self.device: Device = device
+    logical: int
+    physical: int
+    length: int
+    flags: int
+    device: Device
 
     def __repr__(self) -> str:
         return (

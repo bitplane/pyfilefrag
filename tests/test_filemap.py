@@ -17,11 +17,9 @@ def install_filemap_mocks(monkeypatch, path):
         st_ctime_ns=789500000000,
         st_size=8192,
     )
-    device = Device()
-    device.id = stats.st_dev
-    device.type = "block"
-    device.block_size = 4096
-    device.source = "/dev/example"
+    device = Device(
+        id=stats.st_dev, type="block", block_size=4096, source="/dev/example"
+    )
     closed = []
 
     monkeypatch.setattr("filefrag.filemap.os.fstat", lambda fd: stats)
@@ -107,8 +105,7 @@ def test_failed_update_preserves_existing_state(monkeypatch, tmp_path):
         "filefrag.filemap.os.fstat",
         lambda fd: SimpleNamespace(st_dev=999, st_ino=888, st_mtime=777),
     )
-    replacement_device = Device()
-    replacement_device.id = 999
+    replacement_device = Device(id=999)
     monkeypatch.setattr(Device, "from_fd", lambda fd, target: replacement_device)
 
     def fail(fd):
