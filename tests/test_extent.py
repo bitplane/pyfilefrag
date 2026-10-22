@@ -72,7 +72,7 @@ def test_extent_representations():
     )
 
 
-@pytest.mark.parametrize("flags", [2, 4, 7])
+@pytest.mark.parametrize("flags", [2, 4, 7, 0x201, 0x301, 0x309])
 def test_unresolved_extents_have_object_identity(flags):
     first = make_extent(physical=0, flags=flags)
     second = make_extent(physical=0, flags=flags)
@@ -84,3 +84,11 @@ def test_unresolved_extents_have_object_identity(flags):
     assert resolved != first
     assert len({first, second, resolved}) == 3
     assert {first: "first"}[first] == "first"
+
+
+def test_inline_extents_with_real_addresses_remain_comparable():
+    first = make_extent(physical=4096, flags=0x301)
+    second = make_extent(physical=4096, flags=0x301)
+    assert first.has_physical_location
+    assert first == second
+    assert hash(first) == hash(second)

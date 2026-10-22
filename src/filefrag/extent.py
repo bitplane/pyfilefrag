@@ -127,17 +127,22 @@ class Extent:
         """
         return bool(self.flags & self.FIEMAP_EXTENT_SHARED)
 
+    @property
+    def has_physical_location(self) -> bool:
+        """Whether FIEMAP supplied a usable physical address for comparison."""
+        return not (
+            self.is_unknown
+            or self.is_delayed_allocation
+            # btrfs reports inline data with physical=0 without UNKNOWN.
+            or (self.is_inline and self.physical == 0)
+        )
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Extent):
             return NotImplemented
         if self is other:
             return True
-        if (
-            self.is_unknown
-            or self.is_delayed_allocation
-            or other.is_unknown
-            or other.is_delayed_allocation
-        ):
+        if not self.has_physical_location or not other.has_physical_location:
             return False
         return (
             self.device == other.device
@@ -152,7 +157,7 @@ class Extent:
         return self.physical < other.physical
 
     def __hash__(self) -> int:
-        if self.is_unknown or self.is_delayed_allocation:
+        if not self.has_physical_location:
             return object.__hash__(self)
         return hash((self.device, self.physical, self.length))
 

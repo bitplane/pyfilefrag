@@ -47,8 +47,8 @@ print(mapping.extents)
 
 `Device` and `Extent` are immutable snapshots, so their hashes remain stable
 when used as dictionary keys. Construct them with their field values, or use
-`dataclasses.replace()` to make a modified copy. Extents with unknown or delayed
-physical locations compare equal only to themselves.
+`dataclasses.replace()` to make a modified copy. Extents with unknown, delayed,
+or unavailable inline physical locations compare equal only to themselves.
 
 `FileMap.update()` replaces the stored snapshot. `check_stale()` re-reads the
 file's metadata and extents, and treats unresolved locations as stale. Its result

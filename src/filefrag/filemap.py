@@ -86,7 +86,7 @@ class FileMap:
         I/O and may raise filesystem errors. A false result is only a snapshot:
         concurrent writes or filesystem maintenance can invalidate it later.
         """
-        if any(e.is_unknown or e.is_delayed_allocation for e in self.extents):
+        if any(not e.has_physical_location for e in self.extents):
             return True
         try:
             current = FileMap(self.path)

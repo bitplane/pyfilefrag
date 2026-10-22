@@ -171,7 +171,7 @@ def test_staleness_detects_layout_changes_without_timestamp_changes(
     assert mapping.extents[0].physical == 4096
 
 
-@pytest.mark.parametrize("flags", [2, 4, 7])
+@pytest.mark.parametrize("flags", [2, 4, 7, 0x301])
 def test_unresolved_mapping_is_stale(monkeypatch, tmp_path, flags):
     path = tmp_path / "example"
     install_filemap_mocks(monkeypatch, path)
