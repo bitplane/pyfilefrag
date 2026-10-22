@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 source .venv/bin/activate
 
 package_name=$(echo "$1" | tr '-' '_')
