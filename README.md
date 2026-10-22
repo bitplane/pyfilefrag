@@ -45,8 +45,10 @@ mapping = FileMap('/usr/bin/bash')
 print(mapping.extents)
 ```
 
-`Device` and `Extent` are immutable snapshots, so their hashes remain stable
-when used as dictionary keys. Construct them with their field values, or use
+Starting with 0.1.1, `Device` and `Extent` are immutable snapshots, so their hashes
+remain stable when used as dictionary keys. Code that previously assigned their
+attributes must construct a new snapshot instead. Use keyword arguments for
+devices, for example `Device(id=123, source="/dev/example")`, or use
 `dataclasses.replace()` to make a modified copy. Extents with unknown, delayed,
 or unavailable inline physical locations compare equal only to themselves.
 
@@ -54,6 +56,11 @@ or unavailable inline physical locations compare equal only to themselves.
 file's metadata and extents, and treats unresolved locations as stale. Its result
 is a point-in-time check; the filesystem can change again immediately afterward.
 Device type is `block`, `virtual`, or `None` when it cannot be determined.
+
+Physical extent comparisons require a common backing address space. Layered
+filesystems such as overlayfs can report offsets from different backing
+filesystems under one device ID; matching offsets there do not establish sharing.
+Resolve the backing files before using extent equality for deduplication checks.
 
 ## ⚖️ License
 
