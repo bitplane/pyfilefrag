@@ -130,6 +130,15 @@ class Extent:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Extent):
             return NotImplemented
+        if self is other:
+            return True
+        if (
+            self.is_unknown
+            or self.is_delayed_allocation
+            or other.is_unknown
+            or other.is_delayed_allocation
+        ):
+            return False
         return (
             self.device == other.device
             and self.physical == other.physical
@@ -143,6 +152,8 @@ class Extent:
         return self.physical < other.physical
 
     def __hash__(self) -> int:
+        if self.is_unknown or self.is_delayed_allocation:
+            return object.__hash__(self)
         return hash((self.device, self.physical, self.length))
 
     def __format__(self, format_spec: str) -> str:

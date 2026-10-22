@@ -71,3 +71,17 @@ def test_extent_representations():
         "Extent(logical=0x10, physical=0x20, length=0x30, "
         "flags=0x2801 [last,unwritten,shared])"
     )
+
+
+@pytest.mark.parametrize("flags", [2, 4, 7])
+def test_unresolved_extents_have_object_identity(flags):
+    first = make_extent(physical=0, flags=flags)
+    second = make_extent(physical=0, flags=flags)
+    resolved = make_extent(physical=0)
+
+    assert first == first
+    assert first != second
+    assert first != resolved
+    assert resolved != first
+    assert len({first, second, resolved}) == 3
+    assert {first: "first"}[first] == "first"
