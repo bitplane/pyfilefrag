@@ -26,7 +26,10 @@ class FileMap:
         """
         (re)read the data, updating the internal state.
         """
-        path = os.path.abspath(self.path)
+        # abspath() collapses '..' before the kernel can resolve symlinks.
+        path = self.path
+        if not os.path.isabs(path):
+            path = os.path.join(os.getcwd(), path)
 
         try:
             fd = os.open(path, os.O_RDONLY)
@@ -68,7 +71,7 @@ class FileMap:
         except FileNotFoundError:
             return True
 
-        if self.path != os.path.abspath(self.path):
+        if not os.path.isabs(self.path):
             return True
 
         if (

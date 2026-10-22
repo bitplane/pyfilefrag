@@ -1,4 +1,5 @@
 import json
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -161,3 +162,24 @@ def test_filemap_equality():
 
     second.mtime = 0
     assert first != second
+
+
+@pytest.mark.parametrize("relative", [False, True])
+def test_symlink_parent_path_opens_requested_inode(monkeypatch, tmp_path, relative):
+    target = tmp_path / "outer" / "sub"
+    target.mkdir(parents=True)
+    (tmp_path / "link").symlink_to(target, target_is_directory=True)
+    intended = tmp_path / "outer" / "file"
+    intended.write_text("intended")
+    (tmp_path / "file").write_text("wrong")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("filefrag.filemap.fie.get_extents", lambda fd: [])
+    path = "link/../file" if relative else str(tmp_path / "link/../file")
+
+    mapping = FileMap(path)
+
+    assert mapping.inode == intended.stat().st_ino
+    assert os.stat(mapping.path).st_ino == intended.stat().st_ino
+    assert mapping.check_stale() is False
+    mapping.update()
+    assert mapping.inode == intended.stat().st_ino
