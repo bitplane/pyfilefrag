@@ -6,6 +6,7 @@ import sys
 import pytest
 
 from filefrag.filefrag import main
+from filefrag.filemap import FileMap
 
 
 class StubMap:
@@ -76,3 +77,31 @@ def test_fifo_does_not_block_cli_or_device_lookup(tmp_path):
         timeout=5,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_real_filemap_json_end_to_end(tmp_path):
+    first, second = tmp_path / "data", tmp_path / "empty"
+    with first.open("wb") as stream:
+        stream.write(b"x" * 4096)
+        stream.flush()
+        os.fsync(stream.fileno())
+    second.touch()
+    try:
+        FileMap(first)
+    except NotImplementedError:
+        pytest.skip("test filesystem does not support FIEMAP")
+
+    result = subprocess.run(
+        [sys.executable, "-m", "filefrag", "--json", str(first), str(second)],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout)
+    assert [item["path"] for item in data] == [str(first), str(second)]
+    assert data[0]["inode"] == first.stat().st_ino
+    assert data[0]["device"]["id"] == first.stat().st_dev
+    assert data[0]["extents"][0]["logical"] == 0
+    assert data[0]["extents"][0]["length"] >= 4096
+    assert data[1]["extents"] == []
