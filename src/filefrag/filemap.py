@@ -10,7 +10,7 @@ from .device import Device
 from .extent import Extent
 
 
-class _NotRegularFileError(ValueError):
+class _UnsupportedFileTypeError(ValueError):
     pass
 
 
@@ -44,8 +44,12 @@ class FileMap:
 
         try:
             file_stats = os.fstat(fd)
-            if not stat.S_ISREG(file_stats.st_mode):
-                raise _NotRegularFileError(f"Path {self.path} is not a regular file.")
+            if not (
+                stat.S_ISREG(file_stats.st_mode) or stat.S_ISDIR(file_stats.st_mode)
+            ):
+                raise _UnsupportedFileTypeError(
+                    f"Path {self.path} is not a regular file or directory."
+                )
             device = Device.from_fd(fd, path)
             raw_extents = fie.get_extents(fd)
         finally:
@@ -86,7 +90,7 @@ class FileMap:
             return True
         try:
             current = FileMap(self.path)
-        except (_NotRegularFileError, NotADirectoryError):
+        except (_UnsupportedFileTypeError, NotADirectoryError):
             return True
         except ValueError as ex:
             if isinstance(ex.__cause__, FileNotFoundError):

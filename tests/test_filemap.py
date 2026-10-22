@@ -223,3 +223,10 @@ def test_replacing_file_with_directory_makes_map_stale(monkeypatch, tmp_path):
     path.unlink()
     path.mkdir()
     assert mapping.check_stale() is True
+
+
+def test_directory_mapping_is_supported(monkeypatch, tmp_path):
+    monkeypatch.setattr("filefrag.filemap.fie.get_extents", lambda fd: [])
+    mapping = FileMap(tmp_path)
+    assert mapping.inode == tmp_path.stat().st_ino
+    assert mapping.check_stale() is False
