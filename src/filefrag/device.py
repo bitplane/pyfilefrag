@@ -32,39 +32,35 @@ class Device:
         instance = cls()
         instance.id = os.fstat(fd).st_dev
         instance.block_size = os.fstatvfs(fd).f_bsize
-        instance.source = cls._get_device_source(path)
+        instance.source = cls._get_device_source(fd)
         instance.type = "block" if instance.source else "virtual"
         return instance
 
     @staticmethod
-    def _get_device_source(path: str) -> str | None:
-        # We'll store matching mount points and their corresponding devices
-        matching_mounts: list[tuple[str, str]] = []
-
-        # Read /proc/mounts to get all mounted filesystems
-        with open("/proc/mounts", "r") as mounts_file:
-            for line in mounts_file:
-                parts = line.split()
-                source_device = parts[0]  # The source device (e.g., /dev/sda1)
-                mount_point = re.sub(
-                    r"\\([0-7]{3})",
-                    lambda match: chr(int(match.group(1), 8)),
-                    parts[1],
-                )  # The mount point (e.g., /)
-
-                # Match complete path components, not just string prefixes.
-                mount_prefix = mount_point.rstrip("/") + "/"
-                if path == mount_point or path.startswith(mount_prefix):
-                    matching_mounts.append((mount_point, source_device))
-
-        if not matching_mounts:
+    def _get_device_source(fd: int) -> str | None:
+        # Match the descriptor's mount, even after a rename or through a symlink.
+        mount_id = None
+        with open(f"/proc/self/fdinfo/{fd}", "r") as fdinfo:
+            for line in fdinfo:
+                if line.startswith("mnt_id:"):
+                    mount_id = line.split()[1]
+                    break
+        if mount_id is None:
             return None
 
-        # Sort by the length of the mount point (longest first to ensure deepest match)
-        matching_mounts.sort(key=lambda x: len(x[0]), reverse=True)
-
-        # Return the source device for the deepest mount point
-        return matching_mounts[0][1]
+        with open("/proc/self/mountinfo", "r") as mounts:
+            for line in mounts:
+                parts = line.split()
+                if parts[0] != mount_id:
+                    continue
+                separator = parts.index("-")
+                source = parts[separator + 2]
+                return re.sub(
+                    r"\\([0-7]{3})",
+                    lambda match: chr(int(match.group(1), 8)),
+                    source,
+                )
+        return None
 
     def __repr__(self) -> str:
         return (
