@@ -3,7 +3,7 @@
 set -e
 
 # Variables
-PROJECT_NAME=$(basename "$(pwd)")
+PROJECT_NAME="${1:?Pass the project name (or run make docs)}"
 MODULE_NAME=$(echo "$PROJECT_NAME" | tr '-' '_')
 REPO_URL="ssh://git@github.com/bitplane/bitplane.net.git"
 SRC_PATH="docs"
@@ -19,7 +19,9 @@ pydoc-markdown -p "$MODULE_NAME" > ../docs/pydoc/index.md
 cd ..
 
 # Check out the main website repo
-TMP_DIR=$(mktemp -d)
+WORK_ROOT="${TMPDIR:-$HOME/tmp}"
+mkdir -p "$WORK_ROOT"
+TMP_DIR=$(mktemp -d "$WORK_ROOT/$PROJECT_NAME-docs.XXXXXX")
 
 # Cleanup on exit
 cleanup() {

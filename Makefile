@@ -22,7 +22,7 @@ coverage: .venv/.installed-dev scripts/coverage.sh  ## build the html coverage r
 	scripts/coverage.sh $(PROJECT_NAME)
 
 docs: .venv/.installed-dev scripts/docs.sh docs/index.md README.md pyproject.toml ## build the documentation
-	scripts/docs.sh
+	scripts/docs.sh "$(PROJECT_NAME)"
 
 clean:  ## delete caches and the venv
 	scripts/clean.sh
